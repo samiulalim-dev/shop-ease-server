@@ -26,8 +26,38 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyFirebaseToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized: No token provided" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.decoded = decoded;
+    // console.log("Decoded Token:", decoded);
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden: Invalid token" });
+  }
+};
+
 async function run() {
   try {
+    const database = client.db("shop-ease");
+    const userCollection = database.collection("users");
+
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+      const existingUser = await userCollection.findOne({ email: user.email });
+      if (existingUser) {
+        return res.send({ message: "user already exist" });
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection

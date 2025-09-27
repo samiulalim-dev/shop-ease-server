@@ -57,6 +57,22 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+    app.get("/all-user", async (req, res) => {
+      const searchQuery = req.query.search || "";
+      try {
+        const allUser = await userCollection
+          .find({
+            $or: [
+              { name: { $regex: searchQuery, $options: "i" } },
+              { email: { $regex: searchQuery, $options: "i" } },
+            ],
+          })
+          .toArray();
+        res.send(allUser);
+      } catch (error) {
+        console.log(error);
+      }
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();

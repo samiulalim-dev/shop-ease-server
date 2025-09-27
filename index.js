@@ -58,19 +58,49 @@ async function run() {
       res.send(result);
     });
     app.get("/all-user", async (req, res) => {
-      const searchQuery = req.query.search || "";
       try {
-        const allUser = await userCollection
-          .find({
-            $or: [
-              { name: { $regex: searchQuery, $options: "i" } },
-              { email: { $regex: searchQuery, $options: "i" } },
-            ],
-          })
+        const search = req.query.search || "";
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 4;
+        const skip = (page - 1) * limit;
+
+        const filter = {
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+          ],
+        };
+
+        const totalUsers = await userCollection.countDocuments(filter);
+
+        const allUsers = await userCollection
+          .aggregate([
+            { $match: filter },
+            {
+              $addFields: {
+                rolePriority: {
+                  $cond: [{ $eq: ["$role", "admin"] }, 1, 0], // admin = 1, others = 0
+                },
+              },
+            },
+            {
+              $sort: { rolePriority: -1, createdAt: -1 }, // admin first, then newest first
+            },
+            { $skip: skip },
+            { $limit: limit },
+          ])
           .toArray();
-        res.send(allUser);
+
+        res.send({
+          allUsers,
+          totalUsers,
+          totalPages: Math.ceil(totalUsers / limit),
+          currentPage: page,
+          limit,
+        });
       } catch (error) {
-        console.log(error);
+        console.error("Error fetching users:", error);
+        res.status(500).send({ message: "Internal Server Error" });
       }
     });
 

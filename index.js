@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const admin = require("firebase-admin");
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 app.use(cors());
 app.use(express.json());
 const decodedKey = Buffer.from(
@@ -68,6 +68,7 @@ async function run() {
           $or: [
             { name: { $regex: search, $options: "i" } },
             { email: { $regex: search, $options: "i" } },
+            { role: { $regex: search, $options: "i" } },
           ],
         };
 
@@ -101,6 +102,20 @@ async function run() {
       } catch (error) {
         console.error("Error fetching users:", error);
         res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+    app.patch("/user/role/:id", verifyFirebaseToken, async (req, res) => {
+      const { id } = req.params;
+      const { role } = req.body;
+      try {
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: { role: role },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Error updating role" });
       }
     });
 

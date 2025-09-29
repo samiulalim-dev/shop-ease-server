@@ -61,7 +61,7 @@ async function run() {
       try {
         const search = req.query.search || "";
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 4;
+        const limit = parseInt(req.query.limit) || 5;
         const skip = (page - 1) * limit;
 
         const filter = {
@@ -117,6 +117,12 @@ async function run() {
       } catch (err) {
         res.status(500).send({ message: "Error updating role" });
       }
+    });
+    app.get("/user/:email", verifyFirebaseToken, async (req, res) => {
+      const { email } = req.params;
+      const query = { email: email };
+      const result = await userCollection.findOne(query);
+      res.send(result);
     });
 
     // Connect the client to the server	(optional starting in v4.7)

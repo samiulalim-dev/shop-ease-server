@@ -48,6 +48,29 @@ async function run() {
     const database = client.db("shop-ease");
     const userCollection = database.collection("users");
 
+    const verifyAdmin = async (req, res, next) => {
+      try {
+        const email = req.decoded.email;
+        // console.log(email);
+        if (!email) {
+          return res
+            .status(401)
+            .json({ message: "Unauthorized: No decoded email" });
+        }
+
+        const user = await userCollection.findOne({ email: email });
+        console.log("verifyAdmin check:", email, user?.role);
+        if (user?.role !== "admin") {
+          return res
+            .status(403)
+            .json({ message: "Forbidden: Admin access only" });
+        }
+        next();
+      } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+      }
+    };
+
     app.post("/user", async (req, res) => {
       const user = req.body;
       const existingUser = await userCollection.findOne({ email: user.email });
@@ -57,7 +80,7 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
-    app.get("/all-user", async (req, res) => {
+    app.get("/all-user", verifyFirebaseToken, verifyAdmin, async (req, res) => {
       try {
         const search = req.query.search || "";
         const page = parseInt(req.query.page) || 1;
@@ -104,26 +127,37 @@ async function run() {
         res.status(500).send({ message: "Internal Server Error" });
       }
     });
-    app.patch("/user/role/:id", verifyFirebaseToken, async (req, res) => {
-      const { id } = req.params;
-      const { role } = req.body;
-      try {
-        const filter = { _id: new ObjectId(id) };
-        const updateDoc = {
-          $set: { role: role },
-        };
-        const result = await userCollection.updateOne(filter, updateDoc);
-        res.send(result);
-      } catch (err) {
-        res.status(500).send({ message: "Error updating role" });
+    app.patch(
+      "/user/role/:id",
+      verifyFirebaseToken,
+      verifyAdmin,
+
+      async (req, res) => {
+        const { id } = req.params;
+        const { role } = req.body;
+        try {
+          const filter = { _id: new ObjectId(id) };
+          const updateDoc = {
+            $set: { role: role },
+          };
+          const result = await userCollection.updateOne(filter, updateDoc);
+          res.send(result);
+        } catch (err) {
+          res.status(500).send({ message: "Error updating role" });
+        }
       }
-    });
-    app.get("/user/:email", verifyFirebaseToken, async (req, res) => {
-      const { email } = req.params;
-      const query = { email: email };
-      const result = await userCollection.findOne(query);
-      res.send(result);
-    });
+    );
+    app.get(
+      "/user/:email",
+      verifyFirebaseToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { email } = req.params;
+        const query = { email: email };
+        const result = await userCollection.findOne(query);
+        res.send(result);
+      }
+    );
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();

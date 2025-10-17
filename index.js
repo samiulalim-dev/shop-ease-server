@@ -47,6 +47,7 @@ async function run() {
   try {
     const database = client.db("shop-ease");
     const userCollection = database.collection("users");
+    const sellerCollection = database.collection("sellers");
 
     const verifyAdmin = async (req, res, next) => {
       try {
@@ -55,11 +56,11 @@ async function run() {
         if (!email) {
           return res
             .status(401)
-            .json({ message: "Unauthorized: No decoded email" });
+            .send({ message: "Unauthorized: No decoded email" });
         }
 
         const user = await userCollection.findOne({ email: email });
-        console.log("verifyAdmin check:", email, user?.role);
+        // console.log("verifyAdmin check:", email, user?.role);
         if (user?.role !== "admin") {
           return res
             .status(403)
@@ -70,7 +71,7 @@ async function run() {
         res.status(500).json({ message: "Server error", error });
       }
     };
-
+    // user post method
     app.post("/user", async (req, res) => {
       const user = req.body;
       const existingUser = await userCollection.findOne({ email: user.email });
@@ -78,6 +79,18 @@ async function run() {
         return res.send({ message: "user already exist" });
       }
       const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+    // seller post method
+    app.post("/sellers", async (req, res) => {
+      const seller = req.body;
+      const existingSeller = await sellerCollection.findOne({
+        email: seller.email,
+      });
+      if (existingSeller) {
+        return res.send({ message: "seller already exist" });
+      }
+      const result = await sellerCollection.insertOne(seller);
       res.send(result);
     });
     app.get("/all-user", verifyFirebaseToken, verifyAdmin, async (req, res) => {
@@ -131,7 +144,6 @@ async function run() {
       "/user/role/:id",
       verifyFirebaseToken,
       verifyAdmin,
-
       async (req, res) => {
         const { id } = req.params;
         const { role } = req.body;
@@ -150,7 +162,7 @@ async function run() {
     app.get(
       "/user/:email",
       verifyFirebaseToken,
-      verifyAdmin,
+
       async (req, res) => {
         const { email } = req.params;
         const query = { email: email };

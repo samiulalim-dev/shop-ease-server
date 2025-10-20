@@ -197,6 +197,7 @@ async function run() {
       verifyFirebaseToken,
       verifySeller,
       async (req, res) => {
+        const email = req.decoded.email;
         try {
           const product = req.body;
 
@@ -206,12 +207,21 @@ async function run() {
               .status(400)
               .send({ success: false, message: "Missing required fields" });
           }
-
+          // shop address
+          const shopAddress = await sellerCollection.findOne({ email: email });
+          if (!shopAddress) {
+            return res.status(404).send({
+              success: false,
+              message: "Seller information not found",
+            });
+          }
           // ✅ insert to MongoDB
           const result = await productCollection.insertOne({
             ...product,
             createdAt: new Date(),
             status: "pending",
+            shopName: shopAddress.shopName,
+            shopEmail: shopAddress.email,
           });
 
           res.status(201).send({

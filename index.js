@@ -48,6 +48,7 @@ async function run() {
     const database = client.db("shop-ease");
     const userCollection = database.collection("users");
     const sellerCollection = database.collection("sellers");
+    const productCollection = database.collection("products");
 
     const verifyAdmin = async (req, res, next) => {
       try {
@@ -69,6 +70,26 @@ async function run() {
         next();
       } catch (error) {
         res.status(500).json({ message: "Server error", error });
+      }
+    };
+
+    const verifySeller = async (req, res, next) => {
+      try {
+        const email = req.decoded.email;
+        if (!email) {
+          return res
+            .status(401)
+            .send({ message: "Unauthorized: No decoded email" });
+        }
+        const user = await userCollection.findOne({ email: email });
+        if (user?.role !== "seller") {
+          return res
+            .status(403)
+            .json({ message: "Forbidden : seller access only" });
+        }
+        next();
+      } catch (error) {
+        res.status(500).json({ message: "server error", error });
       }
     };
     // user post method
@@ -168,6 +189,42 @@ async function run() {
         const query = { email: email };
         const result = await userCollection.findOne(query);
         res.send(result);
+      }
+    );
+    // product post in DB
+    app.post(
+      "/productDetails",
+      verifyFirebaseToken,
+      verifySeller,
+      async (req, res) => {
+        try {
+          const product = req.body;
+
+          // ✅ basic validation
+          if (!product.productName || !product.price || !product.images) {
+            return res
+              .status(400)
+              .send({ success: false, message: "Missing required fields" });
+          }
+
+          // ✅ insert to MongoDB
+          const result = await productCollection.insertOne({
+            ...product,
+            createdAt: new Date(),
+            status: "pending",
+          });
+
+          res.status(201).send({
+            success: true,
+            message: "Product added successfully",
+            data: result,
+          });
+        } catch (error) {
+          console.error("Error adding product:", error);
+          res
+            .status(500)
+            .send({ success: false, message: "Internal server error" });
+        }
       }
     );
 

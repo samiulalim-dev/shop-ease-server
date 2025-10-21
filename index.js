@@ -237,6 +237,24 @@ async function run() {
         }
       }
     );
+    app.get(
+      "/myProducts",
+      verifyFirebaseToken,
+      verifySeller,
+      async (req, res) => {
+        try {
+          const email = req.query.email;
+
+          const result = await productCollection
+            .find({ shopEmail: email })
+            .sort({ createdAt: -1 })
+            .toArray();
+          res.status(200).send(result);
+        } catch (error) {
+          res.status(500).send("Internal Server Error");
+        }
+      }
+    );
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();

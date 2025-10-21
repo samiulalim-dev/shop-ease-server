@@ -243,13 +243,40 @@ async function run() {
       verifySeller,
       async (req, res) => {
         try {
-          const email = req.query.email;
+          const { email, search = "", page, limit } = req.query;
+          const filter = search
+            ? {
+                $or: [
+                  {
+                    productName: { $regex: search, $options: "i" },
+                  },
+                  {
+                    category: { $regex: search, $options: "i" },
+                  },
+                  {
+                    brand: { $regex: search, $options: "i" },
+                  },
+                  {
+                    shopName: { $regex: search, $options: "i" },
+                  },
+                ],
+              }
+            : {};
+          const query = { shopEmail: email, ...filter };
 
-          const result = await productCollection
-            .find({ shopEmail: email })
+          const totalProducts = await productCollection.countDocuments(query);
+
+          const products = await productCollection
+            .find(query)
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit))
             .sort({ createdAt: -1 })
             .toArray();
-          res.status(200).send(result);
+          res.send({
+            products,
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / limit),
+          });
         } catch (error) {
           res.status(500).send("Internal Server Error");
         }

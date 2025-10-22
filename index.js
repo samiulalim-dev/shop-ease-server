@@ -324,7 +324,7 @@ async function run() {
 
           res.send({
             success: true,
-            message: "✅ Product updated successfully!",
+            message: "Product updated successfully!",
             result,
           });
         } catch (error) {

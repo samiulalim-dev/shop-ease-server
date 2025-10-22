@@ -282,6 +282,60 @@ async function run() {
         }
       }
     );
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const products = await productCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        res.send(products);
+      } catch (error) {
+        res.status(500).send("Internal Server Error");
+      }
+    });
+    app.patch(
+      "/updateProduct/:id",
+      verifyFirebaseToken,
+      verifySeller,
+      async (req, res) => {
+        try {
+          const id = req.params.id;
+          const updatedProduct = req.body;
+
+          const filter = { _id: new ObjectId(id) };
+          const updateDoc = {
+            $set: {
+              productName: updatedProduct.productName,
+              description: updatedProduct.description,
+              price: updatedProduct.price,
+              discount: updatedProduct.discount,
+              stock: updatedProduct.stock,
+              condition: updatedProduct.condition,
+              category: updatedProduct.category,
+              brand: updatedProduct.brand,
+              shipping: updatedProduct.shipping,
+              specification: updatedProduct.specification,
+              images: updatedProduct.images,
+              updatedAt: new Date(),
+            },
+          };
+
+          const result = await productCollection.updateOne(filter, updateDoc);
+
+          res.send({
+            success: true,
+            message: "✅ Product updated successfully!",
+            result,
+          });
+        } catch (error) {
+          console.error(" Error updating product:", error);
+          res.status(500).send({
+            success: false,
+            message: "Internal server error while updating product",
+          });
+        }
+      }
+    );
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();

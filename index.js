@@ -350,6 +350,33 @@ async function run() {
         }
       }
     );
+    app.delete(
+      "/deleteProducts/:id",
+      verifyFirebaseToken,
+      verifySeller,
+      async (req, res) => {
+        const userEmail = req.decoded.email;
+        try {
+          const id = req.params.id;
+          const deleteProduct = await productCollection.findOne({
+            _id: new ObjectId(id),
+          });
+          if (!deleteProduct) {
+            return res.status(404).json({ message: "Product not found" });
+          }
+          if (deleteProduct.shopEmail !== userEmail) {
+            return res
+              .status(403)
+              .json({ message: "You are not allowed to delete this product" });
+          }
+
+          await productCollection.deleteOne({ _id: new ObjectId(id) });
+          res.status(200).json({ message: "Product deleted successfully" });
+        } catch (error) {
+          res.status(500).send("Internal Server Error");
+        }
+      }
+    );
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();

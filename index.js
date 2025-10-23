@@ -282,17 +282,31 @@ async function run() {
         }
       }
     );
-    app.get("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      try {
-        const products = await productCollection.findOne({
-          _id: new ObjectId(id),
-        });
-        res.send(products);
-      } catch (error) {
-        res.status(500).send("Internal Server Error");
+    app.get(
+      "/products/:id",
+      verifyFirebaseToken,
+      verifySeller,
+      async (req, res) => {
+        const id = req.params.id;
+        const email = req.decoded.email;
+        try {
+          const products = await productCollection.findOne({
+            _id: new ObjectId(id),
+          });
+          if (!products) {
+            res.status(404).send({ message: "Product Not Found" });
+          }
+          if (email !== products.shopEmail) {
+            res
+              .status(403)
+              .send({ message: "Forbidden You Can't access this product" });
+          }
+          res.send(products);
+        } catch (error) {
+          res.status(500).send("Internal Server Error");
+        }
       }
-    });
+    );
     app.patch(
       "/updateProduct/:id",
       verifyFirebaseToken,

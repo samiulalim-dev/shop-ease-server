@@ -307,6 +307,29 @@ async function run() {
         }
       }
     );
+    app.get("/products", async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 8;
+        const skip = (page - 1) * limit;
+
+        const totalProducts = await productCollection.countDocuments();
+        const products = await productCollection
+          .find()
+          .skip(skip)
+          .limit(limit)
+          .sort({ _id: -1 })
+          .toArray();
+        res.send({
+          products,
+          currentPage: page,
+          totalPages: Math.ceil(totalProducts / limit),
+          totalProducts,
+        });
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch products", error });
+      }
+    });
     app.patch(
       "/updateProduct/:id",
       verifyFirebaseToken,

@@ -330,6 +330,20 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch products", error });
       }
     });
+    app.get("/productsDetails/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const product = await productCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        if (!product) {
+          return res.status(404).send({ message: "product not found" });
+        }
+        res.send(product);
+      } catch (error) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
     app.patch(
       "/updateProduct/:id",
       verifyFirebaseToken,
